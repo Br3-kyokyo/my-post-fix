@@ -5,10 +5,31 @@ import java.util.Stack;
 
 public class PostFix {
 
+    private Lexer lexer;
     Stack<Command> stack = new Stack<Command>();
     Queue<Command> commandsQueue = new ArrayDeque<Command>();
 
-    public int exec(Lexer lexer) throws Exception {
+    public PostFix(Lexer lexer) {
+        this.lexer = lexer;
+    }
+
+    private ArrayDeque<Command> getExcutableSequenceCommands() throws Exception {
+        ArrayDeque<Command> excutableSequenceCommands = new ArrayDeque<Command>();
+        for (Token token = lexer.read(); !token.isRightParen(); token = lexer.read()) {
+            if (token.isNumber()) {
+                excutableSequenceCommands.add(new NumCommand(Integer.parseInt(token.text)));
+            } else if (token.isString()) {
+                excutableSequenceCommands.add(new StrCommand(token.text));
+            } else if (token.isLeftParen()) {
+                excutableSequenceCommands.add(new ExcutableSequenceCommand(getExcutableSequenceCommands()));
+            } else {
+                throw new Exception("ParsingError");
+            }
+        }
+        return excutableSequenceCommands;
+    }
+
+    public int exec() throws Exception {
 
         // 先頭がカッコでなければエラー
         if (!lexer.read().isLeftParen())
@@ -21,127 +42,95 @@ public class PostFix {
         // 引数の数を読み捨て
         int argc = Integer.parseInt(lexer.read().toString());
 
-        // トークンを取り出してリストを作成
+        // トークンを取り出してCommandオブジェクトのリストを作成
         for (Token token = lexer.read(); !token.Null(); token = lexer.read()) {
-            ArrayDeque<Token> queue = new ArrayDeque<Token>();
-            if (token.isNumber() || token.isString()) {
-                queue.add(token);
-                commandsQueue.add(new Command(queue, false));
+            if (token.isNumber()) {
+                commandsQueue.add(new NumCommand(Integer.parseInt(token.text)));
+            } else if (token.isString()) {
+                commandsQueue.add(new StrCommand(token.text));
             } else if (token.isLeftParen()) {
-                System.out.println(token.text);
-                int depth = 0;
-                for (token = lexer.read(); !token.isRightParen() || depth != 0; token = lexer.read()) {
-                    if (token.isLeftParen())
-                        depth++;
-                    if (token.isRightParen())
-                        depth--;
-                    queue.add(token);
-                }
-                commandsQueue.add(new Command(queue, true));
+                commandsQueue.add(new ExcutableSequenceCommand(getExcutableSequenceCommands()));
             } else {
-
             }
         }
 
-        // printNow();
-
+        // printStackAndQue();
         // 実行
 
         for (Command command = commandsQueue.poll(); command != null; command = commandsQueue.poll()) {
 
-            if (command.isExcutable()) {
+            if (command.isExcutableSequenceCommand()) {
                 stack.push(command);
-            } else if (command.getTokens().getFirst().isNumber()) {
+            } else if (command.isNumCommand()) {
                 stack.push(command);
-            } else {
-                String instruction = command.getTokens().getFirst().text;
+            } else if (command.isStrCommand()) {
+                String instruction = command.toString();
                 if (instruction.equals("swap")) {
                     Command first = stack.pop();
                     Command second = stack.pop();
                     stack.push(first);
                     stack.push(second);
                 } else if (instruction.equals("add")) {
-                    int first = Integer.parseInt(stack.pop().getTokens().getFirst().text);
-                    int second = Integer.parseInt(stack.pop().getTokens().getFirst().text);
-                    ArrayDeque<Token> queue = new ArrayDeque<Token>();
-                    queue.add(new NumToken(first + second));
-                    stack.push(new Command(queue, false));
+                    var first = (NumCommand) (stack.pop());
+                    var second = (NumCommand) (stack.pop());
+                    stack.push(first.add(second));
                 } else if (instruction.equals("mul")) {
-                    int first = Integer.parseInt(stack.pop().getTokens().getFirst().text);
-                    int second = Integer.parseInt(stack.pop().getTokens().getFirst().text);
-                    ArrayDeque<Token> queue = new ArrayDeque<Token>();
-                    queue.add(new NumToken(first * second));
-                    stack.push(new Command(queue, false));
-
+                    var first = (NumCommand) (stack.pop());
+                    var second = (NumCommand) (stack.pop());
+                    stack.push(first.mul(second));
                 } else if (instruction.equals("sub")) {
-                    int first = Integer.parseInt(stack.pop().getTokens().getFirst().text);
-                    int second = Integer.parseInt(stack.pop().getTokens().getFirst().text);
-                    ArrayDeque<Token> queue = new ArrayDeque<Token>();
-                    queue.add(new NumToken(second - first));
-                    stack.push(new Command(queue, false));
-
+                    var first = (NumCommand) (stack.pop());
+                    var second = (NumCommand) (stack.pop());
+                    stack.push(second.sub(first));
                 } else if (instruction.equals("exec")) {
-                    for (Token token : stack.pop().getTokens()) {
-                        ArrayDeque<Token> queue = new ArrayDeque<Token>();
-                        boolean excutableCommandBlock = false;
-
-                        if (excutableCommandBlock) {
-                            if (token.isRightParen()) {
-                                excutableCommandBlock = false;
-                                commandsQueue.add(new Command(queue, true));
-                            } else {
-                                queue.add(token);
-                            }
-                        }
-
-                        if (token.isNumber() || token.isString()) {
-                            queue.add(token);
-                            commandsQueue.add(new Command(queue, false));
-                        } else {
-                            excutableCommandBlock = true;
-                        }
-                    }
-
+                    ExcutableSequenceCommand excutableSequenceCommand = (ExcutableSequenceCommand) stack.pop();
+                    for (Command subcommand : excutableSequenceCommand.getCommands())
+                        commandsQueue.add(subcommand);
                 } else if (instruction.equals("sel")) {
-
                     Command first = stack.pop();
                     Command second = stack.pop();
-                    int flag = Integer.parseInt(stack.pop().getTokens().getFirst().text);
+                    int flag = ((NumCommand) (stack.pop())).eval();
+
+                    // System.out.println("test" + flag);
 
                     if (flag == 0) {
                         stack.push(first);
                     } else {
                         stack.push(second);
                     }
+
                 } else if (instruction.equals("lt")) {
-                    int first = Integer.parseInt(stack.pop().getTokens().getFirst().text);
-                    int second = Integer.parseInt(stack.pop().getTokens().getFirst().text);
+                    int first = ((NumCommand) (stack.pop())).eval();
+                    int second = ((NumCommand) (stack.pop())).eval();
 
-                    ArrayDeque<Token> queue = new ArrayDeque<Token>();
                     if (second < first) {
-                        queue.add(new NumToken(1));
+                        stack.push(new NumCommand(1));
                     } else {
-                        queue.add(new NumToken(0));
-
+                        stack.push(new NumCommand(0));
                     }
-                    stack.push(new Command(queue, false));
                 } else {
                     throw new Exception("unknown instruction: " + instruction);
                 }
+            } else {
+                throw new Exception("unknown exception");
             }
 
-            // printNow();
+            // printStackAndQue();
         }
 
         Command command = stack.pop();
-        if (command.isExcutable())
+        if (command.isExcutableSequenceCommand() || command.isStrCommand())
             throw new Exception();
 
-        Token token = command.getTokens().getFirst();
-        if (token.isString())
-            throw new Exception();
+        return ((NumCommand) command).eval();
+    }
 
-        return Integer.parseInt(token.text);
+    private void printStackAndQue() {
+        System.out.println("======");
+        System.out.println("Stack");
+        printCommandStack();
+        System.out.println("Que");
+        printInputQue();
     }
 
     private void printInputQue() {

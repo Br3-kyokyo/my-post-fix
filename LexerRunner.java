@@ -8,7 +8,7 @@ public class LexerRunner {
             // System.out.println(scan.nextLine());
             Lexer lexer = new Lexer(scan.nextLine());
 
-            for (Token token = lexer.read(); !token.EOL(); token = lexer.read()) {
+            for (Token token = lexer.read(); !token.Null(); token = lexer.read()) {
                 System.out.println(token.text);
             }
         }

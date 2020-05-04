@@ -6,7 +6,7 @@ import java.util.Stack;
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        PostFix postfix = new PostFix();
+        PostFix postfix;
         Lexer lexer;
         Scanner scan = new Scanner(System.in);
 
@@ -14,6 +14,8 @@ public class Main {
         System.out.print("postfix:" + linenum + ">");
         while (scan.hasNextLine()) {
             lexer = new Lexer(scan.nextLine());
+            postfix = new PostFix(lexer);
+
             int result = postfix.exec(lexer);
             System.out.println("=> " + result);
 

@@ -26,8 +26,7 @@ public abstract class Token {
         return false;
     }
 
-    public String getText() {
+    public String toString() {
         return text;
     }
-
 }

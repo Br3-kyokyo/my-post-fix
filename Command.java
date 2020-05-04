@@ -1,32 +1,23 @@
-import java.util.ArrayDeque;
 
-public class Command {
+public abstract class Command {
 
-    private ArrayDeque<Token> queue;
-    private boolean excutable;
-    private Instructions instrution = Instructions.none;
+    // public Command(ArrayDeque<Token> queue, boolean excutable) {
+    // this.queue = queue;
+    // this.excutable = excutable;
+    // }
 
-    public Command(ArrayDeque<Token> queue, boolean excutable) {
-        this.queue = queue;
-        this.excutable = excutable;
+    public boolean isExcutableSequenceCommand() {
+        return false;
     }
 
-    public ArrayDeque<Token> getTokens() {
-        return queue;
+    public boolean isNumCommand() {
+        return false;
     }
 
-    public boolean isExcutable() {
-        return excutable;
+    public boolean isStrCommand() {
+        return false;
     }
 
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("( ");
-        for (Token token : queue) {
-            sb.append(token.text);
-            sb.append(" ");
-        }
-        sb.append(")");
-        return sb.toString();
-    }
+    public abstract String toString();
+
 }
