@@ -16,8 +16,12 @@ public class Main {
             lexer = new Lexer(scan.nextLine());
             postfix = new PostFix(lexer);
 
-            int result = postfix.exec(lexer);
-            System.out.println("=> " + result);
+            try {
+                int result = postfix.exec();
+                System.out.println("=> " + result);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             linenum++;
             System.out.print("postfix:" + linenum + ">");
